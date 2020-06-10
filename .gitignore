@@ -84,3 +84,7 @@ node_modules/
 .rpt2_cache/
 libraries/tools/kotlin-test-js-runner/lib/
 local.properties
+
+# in this project only
+.gitignore
+Main.kt
