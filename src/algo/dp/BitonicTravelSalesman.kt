@@ -71,8 +71,8 @@ class BitonicTravelSalesman(private val vertexes: Array<Ordinate>){
         }
     }
     fun printSolution() {
-        println("Warning: method printSolution of class BitonicTravelSalesman is unfinished.")
         p(order-1, order-1)
+        TODO("not finished yet")
     }
 }
 

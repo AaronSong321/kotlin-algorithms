@@ -5,6 +5,6 @@ import my.algo.testEulerSift
 import my.ds.*
 
 fun main(){
-    testEulerSift()
+    testGraphList()
 }
 
