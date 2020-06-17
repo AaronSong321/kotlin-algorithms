@@ -1,6 +1,6 @@
 package my.ds
 
-import my.algo.dp.min
+import my.algo.commons.*
 import java.util.*
 
 open class GraphListNode<T>(val key: Int) {
@@ -8,9 +8,22 @@ open class GraphListNode<T>(val key: Int) {
     internal var firstEdge: GraphListEdge<T>? = null
     internal var lastEdge: GraphListEdge<T>? = null // for insert purpose
     open operator fun iterator() = GraphListEdgeIterator(firstEdge)
+    fun getSize(): Int {
+        var degreeNumber = if (firstEdge == null) 0 else 1
+        if (firstEdge != null) {
+            var e = firstEdge!!.next
+            while (e != null) {
+                ++degreeNumber
+                e = e.next
+            }
+        }
+        return degreeNumber
+    }
 }
+
 open class GraphListEdge<T>(val to: Int, val weight: Int = 1){
     internal var next: GraphListEdge<T>? = null
+    internal var enable = true // for euler path
 }
 
 open class GraphListEdgeIterator<T>(private var edge: GraphListEdge<T>?): Iterator<GraphListEdge<T>>{
@@ -26,7 +39,7 @@ open class GraphListEdgeIterator<T>(private var edge: GraphListEdge<T>?): Iterat
 
 }
 
-open class GraphList<T, NodeType: GraphListNode<T>>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): Graph<T>(vertexCount, edges){
+open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): Graph<T>(vertexCount, edges){
     open val nodes = List(vertexCount) { GraphListNode<T>(it) }
 
     init {
@@ -55,8 +68,20 @@ open class GraphList<T, NodeType: GraphListNode<T>>(vertexCount: Int, edges: Lis
         addEdgeImpl(from, to, weight)
     }
 
+    fun getEdge(from: Int, to: Int): Int? {
+        for (e in nodes[from])
+            if (e.to == to)
+                return e.weight
+        return null
+    }
 
-    class BfsResult(val distance: IntArray, val precedent: IntArray)
+
+    class BfsResult(val vertexCount: Int, start: Int) {
+        internal val color = Array(vertexCount) { if (it == start) VertexColor.Gray else VertexColor.White }
+        val distance = IntArray(vertexCount) { if (it == start) 0 else Int.MAX_VALUE }
+        val precedent = IntArray(vertexCount) { Undefined }
+        internal val queue = LinkedList<Int>()
+    }
     class DfsResult(val vertexCount: Int, start: Int){
         internal val color = Array(vertexCount) { if (it == start) VertexColor.Gray else VertexColor.White }
         val distance = IntArray(vertexCount) { if (it == start) 0 else Int.MAX_VALUE }
@@ -65,33 +90,37 @@ open class GraphList<T, NodeType: GraphListNode<T>>(vertexCount: Int, edges: Lis
         internal var time = 0
         internal val topologicalSortedList = LinkedList<Int>()
     }
-
     var dfsResult: DfsResult? = null
         private set
     var bfsResult: BfsResult? = null
         private set
 
     override fun bfs(start: Int) {
-        val color = Array(vertexCount) { if (it == start) VertexColor.Gray else VertexColor.White }
-        val distance = IntArray(vertexCount) { if (it == start) 0 else Int.MAX_VALUE }
-        val precedent = IntArray(vertexCount) { Undefined }
-
-        val queue = LinkedList<Int>()
-        queue.push(start)
-        while (!queue.isEmpty()){
-            val u = queue.pop()
+        bfsResult = BfsResult(vertexCount, start)
+        bfsVisit(start)
+        for (u in 0 until vertexCount)
+            if (bfsResult!!.color[u] == VertexColor.White) {
+                bfsResult!!.color[u] = VertexColor.Gray
+                bfsVisit(u)
+            }
+    }
+    private fun bfsVisit(t: Int) {
+        val r = bfsResult!!
+        r.queue.push(t)
+        r.distance[t] = 0
+        while (!r.queue.isEmpty()){
+            val u = r.queue.pop()
             for (edge in nodes[u]) {
                 val v = edge.to
-                if (color[v] == VertexColor.White){
-                    color[v] = VertexColor.Gray
-                    distance[v] = distance[u]+1
-                    precedent[v] = u
-                    queue.push(v)
+                if (r.color[v] == VertexColor.White){
+                    r.color[v] = VertexColor.Gray
+                    r.distance[v] = r.distance[u]+1
+                    r.precedent[v] = u
+                    r.queue.push(v)
                 }
             }
-            color[u] = VertexColor.Black
+            r.color[u] = VertexColor.Black
         }
-        bfsResult = BfsResult(distance, precedent)
     }
 
     override fun dfs(start: Int) {
@@ -120,7 +149,7 @@ open class GraphList<T, NodeType: GraphListNode<T>>(vertexCount: Int, edges: Lis
     }
 
     override fun asTransposed(): Graph<T> {
-        val ans = GraphList<T, NodeType>(vertexCount, null)
+        val ans = GraphList<T>(vertexCount, null)
         for (v in 0 until vertexCount) {
             for (e in nodes[v]) {
                 ans.addEdge(v, e.to, e.weight)
@@ -183,16 +212,100 @@ open class GraphList<T, NodeType: GraphListNode<T>>(vertexCount: Int, edges: Lis
             r.ans.add(oneScc)
         }
     }
+
+    fun cascadeMultiGraphToGraph(): GraphList<T> {
+        val ans = GraphList<T>(vertexCount, null)
+        for (u in 0 until vertexCount) {
+            val edgeExists = BooleanArray(vertexCount) { u == it }
+            for (e in nodes[u]) {
+                val v = e.to
+                if (!edgeExists[v]) {
+                    ans.addEdge(u, v, e.weight)
+                    edgeExists[v] = true
+                }
+            }
+        }
+        return ans
+    }
+
+    fun calculateDiameter(start: Int): Int {
+        if (vertexCount <= 1)
+            throw IllegalStateException("Graph has $vertexCount (at least 2) nodes to call calculateDiameter")
+        val visited = BooleanArray(vertexCount) { it == start  }
+        val distance = IntArray(vertexCount) { if (it == start) 0 else Undefined }
+        val precedent = IntArray(vertexCount) { Undefined }
+
+        val queue = LinkedList<Int>()
+        queue.push(start)
+        while (!queue.isEmpty()){
+            val u = queue.pop()
+            for (edge in nodes[u]) {
+                val v = edge.to
+                if (!visited[v]){
+                    visited[v] = true
+                    distance[v] = distance[u]+1
+                    precedent[v] = u
+                    queue.push(v)
+                }
+            }
+        }
+        return getMinimumBy(queue, 2, Comparator { a, b -> b - a }).sum()
+    }
+
+    fun calculateMinimumSpawnTree(): List<Edge> {
+        return kruskalAlgorithm()
+    }
+
+    fun kruskalAlgorithm(): List<Edge> {
+        val edgeSet = mutableListOf<Edge>()
+        val forest = DisjointSetForest<Int>()
+        val vertex = Array(vertexCount) { forest.makeSet(it) }
+        val edgeHeap = FibHeap<Edge>()
+        for (u in 0..vertexCount)
+            for (e in nodes[u])
+                edgeHeap.insert(Edge(u,e.to,e.weight))
+        while (edgeHeap.size > 0) {
+            val e = edgeHeap.extractMin()!!
+            if (forest.findSet(vertex[e.from]) != forest.findSet(vertex[e.to])) {
+                edgeSet.add(e)
+                forest.union(vertex[e.from], vertex[e.to])
+            }
+        }
+        return edgeSet.toList()
+    }
+    fun primAlgorithm(): List<Edge> {
+        val edgeSet = mutableListOf<Edge>()
+        val vertexHeap = FibHeap<PrimVertex>()
+        val vertex = Array(vertexCount) { PrimVertex(it, Int.MAX_VALUE) }
+        vertex[0].key = 0
+        val heapNode = Array(vertexCount) { vertexHeap.insert(vertex[it]) }
+        while (vertexHeap.size > 0) {
+            val u = vertexHeap.extractMin()!!
+            for (e in nodes[u.u]) {
+                val toNode = vertex[e.to]
+                if (toNode.onHeap && e.weight < toNode.key) {
+                    vertexHeap.deleteNode(heapNode[toNode.u])
+                    toNode.key = e.weight
+                    heapNode[e.to] = vertexHeap.insert(toNode)
+                    edgeSet.add(Edge(u.u, e.to, getEdge(u.u, e.to)!!))
+                }
+            }
+        }
+        return edgeSet.toList()
+    }
 }
 
 fun testGraphList(){
-    val q1 = GraphList<Int, GraphListNode<Int>>(9, listOf(Triple(0,1,1),Triple(1,2,1),Triple(3,2,1),Triple(3,4,1)
+    val q1 = GraphList<Int>(9, listOf(Triple(0,1,1),Triple(1,2,1),Triple(3,2,1),Triple(3,4,1)
     ,Triple(4,5,1),Triple(2,5,1),Triple(6,7,1),Triple(0,7,1),Triple(1,7,1)))
     q1.dfs(5)
     println(q1.topologicalSort())
-    val q2 = GraphList<Int, GraphListNode<Int>>(8, listOf(Triple(0,1,1),Triple(1,2,1),Triple(2,3,1),Triple(3,7,1)
+    q1.bfs(0)
+    println(q1.bfsResult!!.distance)
+    val q2 = GraphList<Int>(8, listOf(Triple(0,1,1),Triple(1,2,1),Triple(2,3,1),Triple(3,7,1)
     ,Triple(3,2,1),Triple(4,0,1),Triple(1,4,1),Triple(4,5,1),Triple(5,6,1)
     ,Triple(6,5,1),Triple(6,7,1),Triple(7,7,1),Triple(2,6,1)))
     val scc = q2.calculateStronglyConnectedComponents()
     println(scc)
+
 }

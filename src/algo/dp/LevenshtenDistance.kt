@@ -1,23 +1,7 @@
 package my.algo.dp
 
-import java.util.Collections.min
+import my.algo.commons.*
 
-fun max(arr: IntArray): Int{
-    var ans = Int.MIN_VALUE
-    for (n in arr){
-        if (ans < n)
-            ans = n
-    }
-    return ans
-}
-fun min(vararg a: Int): Int{
-    var ans = Int.MAX_VALUE
-    for (b in a){
-        if (b < ans)
-            ans = b
-    }
-    return ans
-}
 
 class LevenshtenDistance(val source: String, val dest: String, val cost: IntArray){
     enum class Operation{

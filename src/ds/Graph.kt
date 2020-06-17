@@ -12,4 +12,18 @@ abstract class Graph<T>(val vertexCount: Int, edges: List<Triple<Int, Int, Int>>
     companion object {
         const val Undefined = -1
     }
+
+    data class Edge(val from: Int, val to: Int, val weight: Int)
+        : Comparable<Edge> {
+        override fun compareTo(other: Edge): Int {
+            return weight.compareTo(other.weight)
+        }
+    }
+
+    data class PrimVertex(val u: Int, var key: Int): Comparable<PrimVertex> {
+        var onHeap = true
+        override fun compareTo(other: PrimVertex): Int {
+            return key.compareTo(other.key)
+        }
+    }
 }

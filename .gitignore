@@ -86,5 +86,8 @@ libraries/tools/kotlin-test-js-runner/lib/
 local.properties
 
 # in this project only
-.gitignore
 Main.kt
+
+# for md file
+*.html
+*.pdf
