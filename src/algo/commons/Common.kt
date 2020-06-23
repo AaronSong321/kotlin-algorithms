@@ -2,6 +2,7 @@ package my.algo.commons
 
 import java.util.*
 import kotlin.Comparator
+import kotlin.math.absoluteValue
 
 fun max(arr: IntArray): Int{
     var ans = Int.MIN_VALUE
@@ -74,3 +75,8 @@ fun println(a: DoubleArray) {
     println()
 }
 
+private val Iota = 0.000001
+fun Double.approximate(t: Double): Boolean {
+    return (this-t).absoluteValue <= Iota
+}
+fun Double.isZero() = approximate(0.0)

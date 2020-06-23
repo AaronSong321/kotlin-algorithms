@@ -33,7 +33,7 @@ fun <T> GraphList<T>.partitionBoxers(): Pair<List<Int>, List<Int>>? {
     return (0 until vertexCount).partition { color[it] == 1 }
 }
 
-private fun <T> graphTableDfsVisit(g:GraphTable<T, GraphTableNode<T>>, u: Int, s: Stack<Int>) {
+private fun <T> graphTableDfsVisit(g:GraphTable<T>, u: Int, s: Stack<Int>) {
     for (v in 0 until g.vertexCount) {
         if (g.getEdge(u, v) != 0) {
             g.addEdge(u, v, 0)

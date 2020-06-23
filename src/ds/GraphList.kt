@@ -1,6 +1,7 @@
 package my.ds
 
 import my.algo.commons.*
+import java.lang.IndexOutOfBoundsException
 import java.util.*
 
 open class GraphListNode<T>(val key: Int) {
@@ -39,7 +40,7 @@ open class GraphListEdgeIterator<T>(private var edge: GraphListEdge<T>?): Iterat
 
 }
 
-open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): Graph<T>(vertexCount, edges){
+open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): Graph<T>(vertexCount){
     open val nodes = List(vertexCount) { GraphListNode<T>(it) }
 
     init {
@@ -68,7 +69,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
         addEdgeImpl(from, to, weight)
     }
 
-    fun getEdge(from: Int, to: Int): Int? {
+    override fun getEdge(from: Int, to: Int): Int? {
         for (e in nodes[from])
             if (e.to == to)
                 return e.weight
@@ -98,7 +99,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
     override fun bfs(start: Int) {
         bfsResult = BfsResult(vertexCount, start)
         bfsVisit(start)
-        for (u in 0 until vertexCount)
+        for (u in indices())
             if (bfsResult!!.color[u] == VertexColor.White) {
                 bfsResult!!.color[u] = VertexColor.Gray
                 bfsVisit(u)
@@ -126,7 +127,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
     override fun dfs(start: Int) {
         dfsResult = DfsResult(vertexCount, start)
         dfsVisit(start)
-        for (u in 0 until vertexCount)
+        for (u in indices())
             if (dfsResult!!.color[u] == VertexColor.White)
                 dfsVisit(u)
     }
@@ -150,7 +151,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
 
     override fun asTransposed(): Graph<T> {
         val ans = GraphList<T>(vertexCount, null)
-        for (v in 0 until vertexCount) {
+        for (v in indices()) {
             for (e in nodes[v]) {
                 ans.addEdge(v, e.to, e.weight)
             }
@@ -177,7 +178,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
 
     override fun calculateStronglyConnectedComponents(): List<List<Int>> {
         sccResult = SccResult(vertexCount)
-        for (v in 0 until vertexCount) {
+        for (v in indices()) {
             if (sccResult!!.vertexIndex[v] == Undefined)
                 scc(v)
         }
@@ -215,7 +216,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
 
     fun cascadeMultiGraphToGraph(): GraphList<T> {
         val ans = GraphList<T>(vertexCount, null)
-        for (u in 0 until vertexCount) {
+        for (u in indices()) {
             val edgeExists = BooleanArray(vertexCount) { u == it }
             for (e in nodes[u]) {
                 val v = e.to
@@ -252,16 +253,16 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
         return getMinimumBy(queue, 2, Comparator { a, b -> b - a }).sum()
     }
 
-    fun calculateMinimumSpawnTree(): List<Edge> {
+    override fun calculateMinimumSpawnTree(): List<Edge>? {
         return kruskalAlgorithm()
     }
 
-    fun kruskalAlgorithm(): List<Edge> {
+    override fun kruskalAlgorithm(): List<Edge>? {
         val edgeSet = mutableListOf<Edge>()
         val forest = DisjointSetForest<Int>()
         val vertex = Array(vertexCount) { forest.makeSet(it) }
         val edgeHeap = FibHeap<Edge>()
-        for (u in 0..vertexCount)
+        for (u in indices())
             for (e in nodes[u])
                 edgeHeap.insert(Edge(u,e.to,e.weight))
         while (edgeHeap.size > 0) {
@@ -271,9 +272,9 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
                 forest.union(vertex[e.from], vertex[e.to])
             }
         }
-        return edgeSet.toList()
+        return if (edgeSet.size == vertexCount-1) edgeSet else null
     }
-    fun primAlgorithm(): List<Edge> {
+    override fun primAlgorithm(): List<Edge>? {
         val edgeSet = mutableListOf<Edge>()
         val vertexHeap = FibHeap<PrimVertex>()
         val vertex = Array(vertexCount) { PrimVertex(it, Int.MAX_VALUE) }
@@ -281,6 +282,7 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
         val heapNode = Array(vertexCount) { vertexHeap.insert(vertex[it]) }
         while (vertexHeap.size > 0) {
             val u = vertexHeap.extractMin()!!
+            u.onHeap = false
             for (e in nodes[u.u]) {
                 val toNode = vertex[e.to]
                 if (toNode.onHeap && e.weight < toNode.key) {
@@ -291,7 +293,74 @@ open class GraphList<T>(vertexCount: Int, edges: List<Triple<Int, Int, Int>>?): 
                 }
             }
         }
-        return edgeSet.toList()
+        return  if (edgeSet.size == vertexCount-1) edgeSet else null
+    }
+
+    fun bellmanFordAlgorithm(s: Int): Pair<IntArray,IntArray>? {
+        val distance = IntArray(vertexCount) { if (it == s) 0 else Int.MAX_VALUE }
+        val precedent = IntArray(vertexCount) { Undefined }
+        for (i in indices())
+            for (u in indices())
+                for (e in nodes[u])
+                    if (distance[e.to] > distance[u] + e.weight) {
+                        distance[e.to] = distance[u] + e.weight
+                        precedent[e.to] = u
+                    }
+        for (u in indices())
+            for (e in nodes[u])
+                if (distance[e.to] > distance[u] + e.weight) {
+                    return null
+                }
+        return Pair(distance, precedent)
+    }
+
+    fun getPathBellman(u: Int, v: Int): Pair<Int, List<Int>>? {
+        checkVertex(u)
+        checkVertex(v)
+        val p = bellmanFordAlgorithm(u) ?: return null
+        val path = mutableListOf<Int>()
+        val patht = p.second
+        var n = v
+        while (n != u) {
+            val c = patht[n]
+            path.add(c)
+            n = c
+        }
+        path.add(u)
+        return Pair(p.first[v], path.asReversed())
+    }
+
+    fun dijkstraAlgorithm(s: Int): Pair<IntArray,IntArray> {
+        val distance = IntArray(vertexCount) { if (it == s) 0 else Int.MAX_VALUE }
+        val precedent = IntArray(vertexCount) { Undefined }
+        val q = PriorityQueue<Int> {a,b->distance[a]-distance[b]}
+        for (i in indices())
+            q.add(i)
+        while (q.size > 0) {
+            val u = q.poll()!!
+            for (e in nodes[u])
+                if (distance[e.to] > distance[u] + e.weight) {
+                    distance[e.to] = distance[u] + e.weight
+                    precedent[e.to] = u
+                }
+        }
+        return Pair(distance, precedent)
+    }
+
+    fun getPathDijkstra(u: Int, v: Int): Pair<Int, List<Int>> {
+        checkVertex(u)
+        checkVertex(v)
+        val p = dijkstraAlgorithm(u)
+        val path = mutableListOf<Int>()
+        val patht = p.second
+        var n = v
+        while (n != u) {
+            val c = patht[n]
+            path.add(c)
+            n = c
+        }
+        path.add(u)
+        return Pair(p.first[v], path.asReversed())
     }
 }
 
