@@ -80,3 +80,7 @@ fun Double.approximate(t: Double): Boolean {
     return (this-t).absoluteValue <= Iota
 }
 fun Double.isZero() = approximate(0.0)
+
+const val Undefined = -1
+const val IntInf = Int.MAX_VALUE shr 1
+

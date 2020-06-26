@@ -136,39 +136,39 @@ class CoefficientPolynomial(val degree: Int, init: (Int) -> Complex = { ZERO }) 
     }
 
     operator fun get(a: IntRange): CoefficientPolynomial = slices(a)
+}
 
-    private fun innerNormalTimes(other: CoefficientPolynomial): CoefficientPolynomial {
-        return when(degree) {
-            1 -> {
-                coefficientPolyOf(this[0] * other[0])
-            }
-            2 -> {
-                val p1 = this[0] * other[0]
-                val p2 = this[1] * other[1]
-                val p3 = (this[0] + this[1]) * (other[0] + other[1])
-                coefficientPolyOf(p1, p3-p1-p2, p2)
-            }
-            else -> {
-                val hd = degree shr 1
-                val term1 = this[0 until hd]
-                val term2 = this[hd until degree]
-                val term3 = other[0 until hd]
-                val term4 = other[hd until degree]
-                val p1 = term2.innerNormalTimes(term4)
-                val p2 = term1.innerNormalTimes(term3)
-                val p3 = (term1+term2).innerNormalTimes(term3+term4)
-                val c2 = p3 - p1 - p2
-                p2 + (c2 shr hd) + (p1 shr degree)
-            }
+private fun CoefficientPolynomial.innerNormalTimes(other: CoefficientPolynomial): CoefficientPolynomial {
+    return when(degree) {
+        1 -> {
+            coefficientPolyOf(this[0] * other[0])
+        }
+        2 -> {
+            val p1 = this[0] * other[0]
+            val p2 = this[1] * other[1]
+            val p3 = (this[0] + this[1]) * (other[0] + other[1])
+            coefficientPolyOf(p1, p3-p1-p2, p2)
+        }
+        else -> {
+            val hd = degree shr 1
+            val term1 = this[0 until hd]
+            val term2 = this[hd until degree]
+            val term3 = other[0 until hd]
+            val term4 = other[hd until degree]
+            val p1 = term2.innerNormalTimes(term4)
+            val p2 = term1.innerNormalTimes(term3)
+            val p3 = (term1+term2).innerNormalTimes(term3+term4)
+            val c2 = p3 - p1 - p2
+            p2 + (c2 shr hd) + (p1 shr degree)
         }
     }
+}
 
-    fun normalTimes(other: CoefficientPolynomial): CoefficientPolynomial {
-        val a = max(regularDegree, other.regularDegree)
-        val b = extendTo(a)
-        val c = other.extendTo(a)
-        return b.innerNormalTimes(c).shrink()
-    }
+fun CoefficientPolynomial.normalTimes(other: CoefficientPolynomial): CoefficientPolynomial {
+    val a = max(regularDegree, other.regularDegree)
+    val b = extendTo(a)
+    val c = other.extendTo(a)
+    return b.innerNormalTimes(c).shrink()
 }
 
 fun bitReverse(a: Int, digit: Int): Int {
@@ -235,10 +235,10 @@ class ValuePolynomial(val degree: Int, init: (Int) -> Complex = { ZERO }) {
     }
 
     override fun toString(): String {
-        val s = StringBuilder("{")
+        val s = StringBuilder("(")
         for ((index, a) in values.withIndex()) {
             val k = a.asStringNoSmallPart("%.2f")
-            s.append(if (index != degree - 1) "$k, " else "$k}")
+            s.append(if (index != degree - 1) "$k, " else "$k)")
         }
         return s.toString()
     }
@@ -291,10 +291,30 @@ fun testFFT() {
     val c1 = coefficientPolyOf((-10).R, 1.R, (-1).R, 7.R)
     val c2 = coefficientPolyOf(3.R, (-6).R, 8.R)
     println(c1.recursiveFft().inverseRecursiveFft())
-    println(c1.iterativeFft().inverseRecursiveFft())
     println(c1.iterativeFft().inverseIterativeFft())
+    println(coefficientPolyOf(0.R,2.R,3.R,(-1).R,4.R,5.R,7.R,9.R).iterativeFft())
     println(c1 * c2)
     println(c1.normalTimes(c2))
     println(c2.recursiveFft(8).inverseRecursiveFft().shrink())
+}
+
+fun CoefficientPolynomial.difAllDegree(x: Complex): CoefficientPolynomial {
+    if (x == 0.R) {
+        val ans = CoefficientPolynomial(degree)
+        var factorial = 1
+        for (i in 0 until degree) {
+            if (i != 0) factorial *= i
+            ans[i] = this[i] * factorial
+        }
+        return ans
+    }
+    else {
+        TODO()
+    }
+}
+
+fun testFFTExercise() {
     println(calculatePolynomialFromZeroPoint(listOf(3.R,6.R,3.R,8.R,7.R)))
+    val c1 = coefficientPolyOf(1.R, 3.R, 5.R, 7.R)
+    println(c1.difAllDegree(0.R))
 }
