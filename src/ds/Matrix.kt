@@ -91,11 +91,11 @@ open class Matrix(r: Int, c: Int, init: (Int, Int) -> Int = { _,_ -> 0 }): AMatr
     override val col: Int = c
     constructor(o: Matrix): this(o.row, o.col, {r, c->o[r, c]})
     private val a = IntArray(r * c) {
-        init(it / row, it - it / row * row)
+        init(it / col, it - it / col * col)
     }
     override operator fun get(r: Int, c: Int): Int = a[r*col+c]
     override operator fun set(r: Int, c: Int, v: Int) {
-        a[r*row+c] = v
+        a[r*col+c] = v
     }
 
     override fun equals(other: Any?): Boolean = equalsPrivate(other)
@@ -186,11 +186,11 @@ class BooleanMatrix(r: Int, c: Int, init: (Int, Int) -> Boolean = { _,_ -> false
     override val col: Int = c
     constructor(o: IBooleanMatrix): this(o.row, o.col, {r, c->o[r, c]})
     private val a = BooleanArray(r * c) {
-        init(it / row, it - it / row * row)
+        init(it / col, it - it / col * col)
     }
     override operator fun get(r: Int, c: Int): Boolean = a[r*col+c]
     override operator fun set(r: Int, c: Int, v: Boolean) {
-        a[r*row+c] = v
+        a[r*col+c] = v
     }
     override fun equals(other: Any?): Boolean = equalsPrivate(other)
     override fun hashCode(): Int {

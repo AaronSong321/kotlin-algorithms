@@ -1,10 +1,10 @@
 package my.ds
 
-import kotlin.math.*
+import kotlin.math.log
 
-// Template Fibonacci Heap where T is comparable.
-class FibHeap<T: Comparable<T>>{
-    class Node<E: Comparable<E>> internal constructor(key: E): Comparable<Node<E>>{
+// Template Fibonacci Heap that takes a lambda for comparison
+class FibonacciHeap<T>(private val comparator: (T, T) -> Int) {
+    class Node<E> internal constructor(key: E, private val comparator: (E, E) -> Int) {
         var key: E = key
             internal set
         internal var firstChild: Node<E>? = null
@@ -50,7 +50,7 @@ class FibHeap<T: Comparable<T>>{
             // do not mark this node here
         }
 
-        override operator fun compareTo(other: Node<E>): Int {
+        operator fun compareTo(other: Node<E>): Int {
             return if (markedAsNegativeInfinity) {
                 if (other.markedAsNegativeInfinity)
                     0
@@ -60,12 +60,12 @@ class FibHeap<T: Comparable<T>>{
                 if (other.markedAsNegativeInfinity)
                     Int.MAX_VALUE
                 else
-                    key.compareTo(other.key)
+                    comparator(key, other.key)
             }
         }
     }
     var minNode: Node<T>? = null
-        private set
+        internal set
     var size: Int = 0
         private set
 
@@ -98,7 +98,7 @@ class FibHeap<T: Comparable<T>>{
         return true
     }
     fun insert(element: T): Node<T> {
-        val newNode = Node(element)
+        val newNode = Node(element, comparator)
         addToRootList(newNode)
         ++size
         return newNode
@@ -110,8 +110,9 @@ class FibHeap<T: Comparable<T>>{
     }
 
     fun minimum(): T? = minNode?.key
-    fun union(other: FibHeap<T>): FibHeap<T> {
-        val ans = FibHeap<T>()
+
+    fun union(other: FibonacciHeap<T>): FibonacciHeap<T> {
+        val ans = FibonacciHeap(comparator)
         when {
             size == 0 && other.size == 0 -> { }
             size == 0 -> {
@@ -215,7 +216,7 @@ class FibHeap<T: Comparable<T>>{
         }
     }
     fun decreaseKey(node: Node<T>, k: T) {
-        if (node.key <= k) {
+        if (comparator(node.key, k) <= 0) {
             throw IllegalArgumentException("function FibHeap::decreaseKey requires k $k smaller than node.key ${node.key}")
         }
         node.key = k
@@ -246,27 +247,27 @@ class FibHeap<T: Comparable<T>>{
     }
 }
 
-fun <T:Comparable<T>> fibHeapOf(vararg elements: T): FibHeap<T> {
-    val ans = FibHeap<T>()
+fun <T> fibonacciHeapOf(comparator: (T, T) -> Int, vararg elements: T): FibonacciHeap<T> {
+    val ans = FibonacciHeap(comparator)
     for (e in elements){
         ans.add(e)
     }
     return ans
 }
 
-fun <T:Comparable<T>> union(a: FibHeap<T>, b: FibHeap<T>): FibHeap<T> {
+fun <T> union(a: FibonacciHeap<T>, b: FibonacciHeap<T>): FibonacciHeap<T> {
     return a.union(b)
 }
 
-fun testFibHeap(){
-    val f1 = fibHeapOf(1, 7, -3, 5)
+fun testFibonacciHeap() {
+    val f1 = fibonacciHeapOf( { a,b -> a-b }, 1,7,-3,5)
     val node58 = f1.insert(58)
     f1.decreaseKey(node58, -10)
     println(f1.extractMin())
     val node100 = f1.insert(100)
     f1.deleteNode(node100)
 
-    val f2 = fibHeapOf(1, 7, -3, 5)
+    val f2 = fibonacciHeapOf({ a,b -> a-b }, 1, 7, -3, 5)
     while (f2.size > 0)
         println(f2.extractMin())
 }
